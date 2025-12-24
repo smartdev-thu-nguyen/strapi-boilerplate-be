@@ -98,12 +98,63 @@ async function uploadFile(file, name) {
 }
 
 // Create an entry and attach files if there are any
-async function createEntry({ model, entry }) {
+async function createEntry({ model, entry, shouldPublish = false, uniqueField = null }) {
   try {
+    const documentsApi = strapi.documents(`api::${model}.${model}`);
+    
+    // Check if document already exists
+    // For single types (global, about), check by status
+    if (model === 'global' || model === 'about') {
+      try {
+        const existing = await documentsApi.findOne({
+          status: 'published',
+        });
+        if (existing) {
+          // Update existing document instead of creating new one
+          const updateOptions = {
+            documentId: existing.documentId,
+            data: entry,
+          };
+          if (shouldPublish) {
+            updateOptions.status = 'published';
+          }
+          return await documentsApi.update(updateOptions);
+        }
+      } catch (e) {
+        // Document doesn't exist, continue to create
+      }
+    }
+    // For collection types, check by unique field (slug, name, etc.)
+    else if (uniqueField && entry[uniqueField]) {
+      try {
+        // Check both draft and published versions to avoid duplicates
+        const existing = await documentsApi.findMany({
+          filters: { [uniqueField]: entry[uniqueField] },
+        });
+        
+        if (existing && existing.length > 0) {
+          // Document already exists, skip creation
+          console.log(`${model} with ${uniqueField} "${entry[uniqueField]}" already exists, skipping...`);
+          return existing[0];
+        }
+      } catch (e) {
+        // Continue if check fails
+      }
+    }
+    
     // Actually create the entry in Strapi
-    await strapi.documents(`api::${model}.${model}`).create({
+    const createOptions = {
       data: entry,
-    });
+    };
+    
+    // If shouldPublish is true, set status to published
+    // This ensures only published version is created, not draft
+    if (shouldPublish) {
+      createOptions.status = 'published';
+    }
+    
+    const document = await documentsApi.create(createOptions);
+    return document;
   } catch (error) {
     console.error({ model, entry, error });
   }
@@ -177,9 +228,9 @@ async function importArticles() {
         ...article,
         cover,
         blocks: updatedBlocks,
-        // Make sure it's not a draft
-        publishedAt: Date.now(),
       },
+      shouldPublish: true,
+      uniqueField: 'slug', // Use slug as unique identifier
     });
   }
 }
@@ -192,13 +243,12 @@ async function importGlobal() {
     entry: {
       ...global,
       favicon,
-      // Make sure it's not a draft
-      publishedAt: Date.now(),
       defaultSeo: {
         ...global.defaultSeo,
         shareImage,
       },
     },
+    shouldPublish: true,
   });
 }
 
@@ -210,15 +260,18 @@ async function importAbout() {
     entry: {
       ...about,
       blocks: updatedBlocks,
-      // Make sure it's not a draft
-      publishedAt: Date.now(),
     },
+    shouldPublish: true,
   });
 }
 
 async function importCategories() {
   for (const category of categories) {
-    await createEntry({ model: 'category', entry: category });
+    await createEntry({ 
+      model: 'category', 
+      entry: category,
+      uniqueField: 'slug', // Use slug as unique identifier
+    });
   }
 }
 
@@ -232,7 +285,45 @@ async function importAuthors() {
         ...author,
         avatar,
       },
+      uniqueField: 'email', // Use email as unique identifier (or 'slug' if available)
     });
+  }
+}
+
+async function cleanupDraftVersions() {
+  // Clean up draft versions for content types with draftAndPublish enabled
+  const modelsWithDraftPublish = ['article', 'global', 'about'];
+  
+  for (const model of modelsWithDraftPublish) {
+    try {
+      // Find all draft versions (status: 'draft')
+      const drafts = await strapi.documents(`api::${model}.${model}`).findMany({
+        status: 'draft',
+      });
+      
+      // Delete draft versions that have a corresponding published version
+      for (const draft of drafts || []) {
+        try {
+          // Check if there's a published version with the same documentId
+          const published = await strapi.documents(`api::${model}.${model}`).findOne({
+            documentId: draft.documentId,
+            status: 'published',
+          });
+          
+          // If published version exists, delete the draft
+          if (published) {
+            await strapi.documents(`api::${model}.${model}`).delete({
+              documentId: draft.documentId,
+              status: 'draft',
+            });
+          }
+        } catch (e) {
+          // Continue if delete fails
+        }
+      }
+    } catch (e) {
+      // Continue if cleanup fails for this model
+    }
   }
 }
 
@@ -252,6 +343,9 @@ async function importSeedData() {
   await importArticles();
   await importGlobal();
   await importAbout();
+  
+  // Clean up any duplicate draft versions
+  await cleanupDraftVersions();
 }
 
 async function main() {

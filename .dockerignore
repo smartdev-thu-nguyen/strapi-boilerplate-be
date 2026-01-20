@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+
+# Build output (will be regenerated)
+dist/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Docker files (don't include in build context)
+docker-compose*.yml
+Dockerfile*
+
+# Database files
+.tmp/
+*.db
+
+# Documentation
+README.md
+LICENSE
+license.txt
+
+# Data folder (seed data)
+data/

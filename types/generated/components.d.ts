@@ -1,5 +1,55 @@
 import type { Schema, Struct } from '@strapi/strapi';
 
+export interface HomeHeroSlides extends Struct.ComponentSchema {
+  collectionName: 'components_home_hero_slides';
+  info: {
+    displayName: 'heroSlides';
+  };
+  attributes: {
+    cta: Schema.Attribute.String;
+    ctaLink: Schema.Attribute.String;
+    description: Schema.Attribute.Text;
+    image: Schema.Attribute.Media<'images' | 'files' | 'videos' | 'audios'>;
+    subtitle: Schema.Attribute.String;
+    title: Schema.Attribute.String;
+  };
+}
+
+export interface HomeIndustries extends Struct.ComponentSchema {
+  collectionName: 'components_home_industries';
+  info: {
+    displayName: 'Industries';
+  };
+  attributes: {
+    description: Schema.Attribute.String;
+    name: Schema.Attribute.String;
+  };
+}
+
+export interface HomeProductCategories extends Struct.ComponentSchema {
+  collectionName: 'components_home_product_categories';
+  info: {
+    displayName: 'Product Categories';
+  };
+  attributes: {
+    description: Schema.Attribute.String;
+    href: Schema.Attribute.String;
+    image: Schema.Attribute.Media<'images' | 'files' | 'videos' | 'audios'>;
+    title: Schema.Attribute.String;
+  };
+}
+
+export interface HomeStats extends Struct.ComponentSchema {
+  collectionName: 'components_home_stats';
+  info: {
+    displayName: 'Stats';
+  };
+  attributes: {
+    label: Schema.Attribute.String;
+    value: Schema.Attribute.String;
+  };
+}
+
 export interface SharedMedia extends Struct.ComponentSchema {
   collectionName: 'components_shared_media';
   info: {
@@ -65,6 +115,10 @@ export interface SharedSlider extends Struct.ComponentSchema {
 declare module '@strapi/strapi' {
   export module Public {
     export interface ComponentSchemas {
+      'home.hero-slides': HomeHeroSlides;
+      'home.industries': HomeIndustries;
+      'home.product-categories': HomeProductCategories;
+      'home.stats': HomeStats;
       'shared.media': SharedMedia;
       'shared.quote': SharedQuote;
       'shared.rich-text': SharedRichText;

@@ -32,6 +32,16 @@ export default {
     ],
   },
   bootstrap(app: StrapiApp) {
-    console.log(app);
+    const style = document.createElement('style');
+    style.innerHTML = `
+      div[data-testid="banner-trial"] {
+        display: none !important;
+      }
+      /* Hoặc nếu class cụ thể hơn */
+      div[aria-label="Trial banner"] {
+        display: none !important;
+      }
+    `;
+    document.head.appendChild(style);
   },
 };
